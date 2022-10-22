@@ -23,39 +23,39 @@ class SDEngine:
 		# Scheduler
 		self.scheduler = LMSDiscreteScheduler(beta_start=beta_start, beta_end=beta_end, beta_schedule="scaled_linear", num_train_timesteps=1000)
 
-	def generate(self, prompts, width=512, height=512, guidance=7.5, seed=None, steps=50):
-		images = []
-		seeds = []
-		# Loop through the prompts one by one for the time being while waiting on following issue to be fixed:
-		# https://github.com/huggingface/diffusers/issues/941 & https://github.com/pytorch/pytorch/issues/84039
-		for prompt in prompts:
-			text = self.get_embeddings(prompt)
-			uncond = self.get_embeddings([""], text.shape[1])
-			emb = torch.cat([uncond, text])
-			if seed is None:
-				img_seed = random.randrange(2 ** 32 - 1)
-			else:
-				img_seed = seed
-			print(f'Image seed is: {img_seed}')
-			torch.manual_seed(img_seed)
-			latents = torch.randn((1, self.unet.in_channels, height // 8, width // 8))
-			self.scheduler.set_timesteps(steps)
-			latents = latents.to(self.device).half() * self.scheduler.init_noise_sigma
-			# Loop through time steps
-			for i, ts in enumerate(tqdm(self.scheduler.timesteps)):
-				inp = self.scheduler.scale_model_input(torch.cat([latents] * 2), ts)
-				with torch.no_grad():
-					tf = ts
-					if torch.has_mps:
-						tf = ts.type(torch.float32)
-					u, t = self.unet(inp, tf, encoder_hidden_states=emb).sample.chunk(2)
-				pred = u + guidance * (t - u)
-				latents = self.scheduler.step(pred, ts, latents).prev_sample
+	# We only generate one image at a time for the time being while waiting on following issue to be fixed:
+	# https://github.com/huggingface/diffusers/issues/941 & https://github.com/pytorch/pytorch/issues/84039
+	def generate(self, prompt, width=512, height=512, guidance=7.5, seed=None, steps=50, callback=None, frame_cap=None):
+		text = self.get_embeddings(prompt)
+		uncond = self.get_embeddings([""], text.shape[1])
+		emb = torch.cat([uncond, text])
+		if seed is None:
+			img_seed = random.randrange(2 ** 32 - 1)
+		else:
+			img_seed = seed
+		torch.manual_seed(img_seed)
+		latents = torch.randn((1, self.unet.in_channels, height // 8, width // 8))
+		self.scheduler.set_timesteps(steps)
+		latents = latents.to(self.device).half() * self.scheduler.init_noise_sigma
+		# Loop through time steps
+		for i, ts in enumerate(tqdm(self.scheduler.timesteps)):
+			inp = self.scheduler.scale_model_input(torch.cat([latents] * 2), ts)
 			with torch.no_grad():
-				image = self.get_image(self.vae.decode(1 / 0.18215 * latents).sample)
-				images.append(image)
-				seeds.append(img_seed)
-		return images, seeds
+				tf = ts
+				if torch.has_mps:
+					tf = ts.type(torch.float32)
+				u, t = self.unet(inp, tf, encoder_hidden_states=emb).sample.chunk(2)
+			pred = u + guidance * (t - u)
+			latents = self.scheduler.step(pred, ts, latents).prev_sample
+			# Do we have a callback?
+			if callback is not None and frame_cap is not None:
+				ndx = i + 1
+				if ndx % frame_cap == 0:
+					img = self.get_image(self.vae.decode(1 / 0.18215 * latents).sample)
+					callback(ndx, img)
+		with torch.no_grad():
+			image = self.get_image(self.vae.decode(1 / 0.18215 * latents).sample)
+		return image, img_seed
 
 	def get_embeddings(self, prompt, maxlen=None):
 		if maxlen is None:
