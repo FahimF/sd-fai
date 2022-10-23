@@ -1,6 +1,5 @@
 import argparse
 from PIL import Image
-from sd_engine import SDEngine
 from sd_support import SDSupport
 
 """
@@ -10,8 +9,9 @@ from sd_support import SDSupport
 # Parse CLI arguments
 parser = argparse.ArgumentParser()
 parser.add_argument('-c', '--copies', type=int, default=1, help='Number of images to generate')
+parser.add_argument('-e', '--engine', type=str, default='torch', help='The SD engine to use: PyTorch or TensorFlow. Values: torch or tf')
 parser.add_argument('-F', '--frame_cap', type=int, help='Save every nth frame')
-parser.add_argument('-f', '--strength', default=0.75, type=float, help='How strongly the input image affects the final generated image')
+parser.add_argument('-f', '--strength', type=float, default=0.75, help='How strongly the input image affects the final generated image')
 parser.add_argument('-g', '--guidance', type=float, default=7.5, help='How closely you want the final image to be guided by the prompt')
 parser.add_argument('-H', '--height', type=int, default=512, help='Image height, should be a multiple of 8')
 parser.add_argument('-I', '--init_image', type=str, help='Path to input image for image guidance')
@@ -32,11 +32,17 @@ if args.height % 8 != 0:
 # Support class
 helper = SDSupport(args)
 # SD engiine
-sd = SDEngine()
+if args.engine == 'torch':
+	from sd_engine import SDEngine
+	sd = SDEngine()
+else:
+	from sd_engine_tf import SDEngineTF
+	sd = SDEngineTF()
 
 # Frame callback
 def frame_callback(index: int, image: Image):
-	helper.save_to_png(image, prefix='frame', index=index)
+	prefix = 'frame' if args.engine == 'torch' else 'tf-frame'
+	helper.save_to_png(image, prefix=prefix, index=index)
 
 # Prompt set up
 prompts = args.prompts
