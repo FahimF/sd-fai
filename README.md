@@ -39,3 +39,23 @@ options:
                         Image width, should be a multiple of 8
 ```
 
+## Usage Instructions
+
+Basic usage requires passing at least a prompt (or prompts) via the CLI:
+
+```bash
+python cli.py -p "a mouse riding a lion"
+```
+
+If you want to enter multiple prompts, then they should all follow the `-p` argument and be separated by spaces like this:
+
+```bash
+python cli.py -p "a mouse riding a lion" "a tiger riding an elephant"
+```
+
+The engine/framework used by default is PyTorch. If you want to switch to using the Tensorflow-based engine, use the `-e` argment:
+
+```bash
+python cli.py -p "a mouse riding a lion" -e tf
+```
+

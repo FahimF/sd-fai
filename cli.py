@@ -37,7 +37,7 @@ if args.engine == 'torch':
 	sd = SDEngine()
 else:
 	from sd_engine_tf import SDEngineTF
-	sd = SDEngineTF()
+	sd = SDEngineTF(width=args.width, height=args.height)
 
 # Frame callback
 def frame_callback(index: int, image: Image):
