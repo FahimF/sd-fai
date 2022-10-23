@@ -1,4 +1,3 @@
-import math
 import os
 import random
 from typing import Callable, Optional
@@ -7,13 +6,15 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 from keras_cv.models.generative.stable_diffusion.clip_tokenizer import SimpleTokenizer
-from keras_cv.models.generative.stable_diffusion.constants import _ALPHAS_CUMPROD
 from keras_cv.models.generative.stable_diffusion.decoder import Decoder
 from keras_cv.models.generative.stable_diffusion.diffusion_model import DiffusionModel
 from keras_cv.models.generative.stable_diffusion.text_encoder import TextEncoder
 from tensorflow import keras
+from tqdm.auto import tqdm
 
-class SDEngineTF:
+from tf.simple_scheduler import SimpleScheduler
+
+class SDEngine:
 	def __init__(self, width: int = 512, height: int = 512, jit_compile: bool = False):
 		self.MAX_PROMPT_LENGTH = 77
 		# Reduce Tensorflow logs
@@ -57,6 +58,9 @@ class SDEngineTF:
 		seed: int = None, steps: int = 50, callback: Optional[Callable[[int, Image], None]] = None,
 		frame_cap: int = None) -> (Image, int):
 		batch_size = 1
+		# Scheduler
+		self.scheduler = SimpleScheduler(num_steps=steps)
+		# Embeddings
 		conditioned = self.get_embeddings(prompt)
 		unconditioned = self.get_embeddings('')
 		# Generate seed, if necessary
@@ -64,31 +68,21 @@ class SDEngineTF:
 			img_seed = random.randrange(2 ** 32 - 1)
 		else:
 			img_seed = seed
+		# The latents tensor will be [1, 64, 64 4] by default
 		latents = tf.random.normal((batch_size, self.height // 8, self.width // 8, 4), seed=seed)
-		# Timesteps
-		timesteps = tf.range(1, 1000, 1000 // steps)
-		progress = keras.utils.Progbar(len(timesteps))
-		# Alphas
-		alphas = [_ALPHAS_CUMPROD[t] for t in timesteps]
-		alphas_prev = [1.0] + alphas[:-1]
-		# Loop through for timesteps
-		for index, timestep in list(enumerate(timesteps))[::-1]:
-			# Set aside the previous latents
-			latent_prev = latents
-			t_emb = self.get_timestep_embedding(timestep, batch_size)
+		# Loop through time steps
+		lst = list(enumerate(self.scheduler.timesteps))[::-1]
+		for i, ts in tqdm(lst):
+			t_emb = self.scheduler.get_timestep_embedding(ts, batch_size, latents)
 			uncond = self.model.predict_on_batch([latents, t_emb, unconditioned])
 			cond = self.model.predict_on_batch([latents, t_emb, conditioned])
-			latents = uncond + guidance * (cond - uncond)
-			a_t, a_prev = alphas[index], alphas_prev[index]
-			pred_x0 = (latent_prev - math.sqrt(1 - a_t) * latents) / math.sqrt(a_t)
-			latents = latents * math.sqrt(1.0 - a_prev) + math.sqrt(a_prev) * pred_x0
+			latents = self.scheduler.get_latents(uncond, cond, i, guidance)
 			# Do we have a callback?
 			if callback is not None and frame_cap is not None:
-				ndx = (steps - index) + 1
+				ndx = i + 1
 				if ndx % frame_cap == 0:
 					img = self.get_image(latents)
 					callback(ndx, img)
-			progress.update(steps - index)
 		# Decoding stage
 		image = self.get_image(latents)
 		return image, img_seed
@@ -105,14 +99,6 @@ class SDEngineTF:
 		if embeddings.shape.rank == 2:
 			embeddings = tf.repeat(tf.expand_dims(embeddings, axis=0), batch_size, axis=0)
 		return embeddings
-
-	def get_timestep_embedding(self, timestep: int, batch_size: int, dim:int = 320, max_period: int = 10000) -> tf.Tensor:
-		half = dim // 2
-		freqs = tf.math.exp(-math.log(max_period) * tf.range(0, half, dtype=tf.float32) / half)
-		args = tf.convert_to_tensor([timestep], dtype=tf.float32) * freqs
-		embedding = tf.concat([tf.math.cos(args), tf.math.sin(args)], 0)
-		embedding = tf.reshape(embedding, [1, -1])
-		return tf.repeat(embedding, batch_size, axis=0)
 
 	def get_image(self, latents: tf.Tensor) -> Image:
 		decoded = self.decoder.predict_on_batch(latents)[0]

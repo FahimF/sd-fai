@@ -33,11 +33,11 @@ if args.height % 8 != 0:
 helper = SDSupport(args)
 # SD engiine
 if args.engine == 'torch':
-	from sd_engine import SDEngine
+	from torch.sd_engine import SDEngine
 	sd = SDEngine()
 else:
-	from sd_engine_tf import SDEngineTF
-	sd = SDEngineTF(width=args.width, height=args.height)
+	from tf.sd_engine import SDEngine
+	sd = SDEngine(width=args.width, height=args.height)
 
 # Frame callback
 def frame_callback(index: int, image: Image):
