@@ -33,7 +33,7 @@ if args.height % 8 != 0:
 helper = SDSupport(args)
 # SD engiine
 if args.engine == 'torch':
-	from torch.sd_engine import SDEngine
+	from pt.sd_engine import SDEngine
 	sd = SDEngine()
 else:
 	from tf.sd_engine import SDEngine
