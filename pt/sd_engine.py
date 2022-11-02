@@ -8,16 +8,18 @@ from tqdm.auto import tqdm
 from transformers import CLIPTextModel, CLIPTokenizer
 
 class SDEngine:
-	def __init__(self, beta_start: float = 0.00085, beta_end: float = 0.012):
+	def __init__(self, beta_start: float = 0.00085, beta_end: float = 0.012, version: str = '1.5'):
 		# Device
 		self.device = "cuda" if torch.cuda.is_available() else "mps" if torch.has_mps else "cpu"
 		# Tokenizer and text encoder
+		model = "stable-diffusion-v1-5" if version == '1.5' else "stable-diffusion-v1-4"
+		print(f'Using model version: {version}')
 		self.tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-large-patch14", torch_dtype=torch.float16)
 		self.text_encoder = CLIPTextModel.from_pretrained("openai/clip-vit-large-patch14", torch_dtype=torch.float16).to(self.device)
 		# VAE
-		self.vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-ema", torch_dtype=torch.float16).to(self.device)
+		self.vae = AutoencoderKL.from_pretrained("sd-vae-ft-mse", torch_dtype=torch.float16).to(self.device)
 		# UNet
-		self.unet = UNet2DConditionModel.from_pretrained("CompVis/stable-diffusion-v1-4", subfolder="unet", torch_dtype=torch.float16).to(self.device)
+		self.unet = UNet2DConditionModel.from_pretrained(model, subfolder="unet", torch_dtype=torch.float16).to(self.device)
 		# Attention slicing - improves performance on macOS
 		if torch.has_mps:
 			slice_size = self.unet.config.attention_head_dim // 2

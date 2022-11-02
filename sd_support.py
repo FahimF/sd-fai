@@ -53,6 +53,7 @@ class SDSupport:
 		switches.append(f'-W{self.args.width}')
 		switches.append(f'-H{self.args.height}')
 		switches.append(f'-g{self.args.guidance}')
+		switches.append(f'-v{self.args.version}')
 		if self.args.init_image is not None:
 			switches.append(f'-I{self.args.init_image}')
 		if self.args.strength and self.args.init_image is not None:

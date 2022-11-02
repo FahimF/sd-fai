@@ -19,7 +19,9 @@ parser.add_argument('-o', '--outdir', type=str, help='The output folder for gene
 parser.add_argument('-p', '--prompts', type=str, nargs='+', help='One or more prompts enclosed in quotes')
 parser.add_argument('-S', '--seed', type=int, help='Image seed - the same image will be generated for a specific seed')
 parser.add_argument('-s', '--steps', type=int, default=50, help='Number of inference steps')
+parser.add_argument('-v', '--version', type=str, default='1.5', help='Stable Diffusion model version to use. Valid - 1.4, 1.5, defaults to 1.5')
 parser.add_argument('-W', '--width', type=int, default=512, help='Image width, should be a multiple of 8')
+
 args = parser.parse_args()
 # Argument validations
 if args.width % 8 != 0:
@@ -34,10 +36,10 @@ helper = SDSupport(args)
 # SD engiine
 if args.engine == 'torch':
 	from pt.sd_engine import SDEngine
-	sd = SDEngine()
+	sd = SDEngine(version=args.version)
 else:
 	from tf.sd_engine import SDEngine
-	sd = SDEngine(width=args.width, height=args.height)
+	sd = SDEngine(width=args.width, height=args.height, version=args.version)
 
 # Frame callback
 def frame_callback(index: int, image: Image):
