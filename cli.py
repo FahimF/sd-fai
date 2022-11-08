@@ -9,6 +9,7 @@ from sd_support import SDSupport
 # Parse CLI arguments
 parser = argparse.ArgumentParser()
 parser.add_argument('-c', '--copies', type=int, default=1, help='Number of images to generate')
+parser.add_argument('-d', '--scheduler', type=str, default='lmsd', help='Type of scheduler to use. Options: lmsd, ddim, dpm (DPMSolver), dpmp (DPMSolver++), euler, euler_a (Ancestral). Default: lmsd')
 parser.add_argument('-e', '--engine', type=str, default='torch', help='The SD engine to use: PyTorch or TensorFlow. Values: torch or tf')
 parser.add_argument('-F', '--frame_cap', type=int, help='Save every nth frame')
 parser.add_argument('-f', '--strength', type=float, default=0.75, help='How strongly the input image affects the final generated image')
@@ -36,7 +37,7 @@ helper = SDSupport(args)
 # SD engiine
 if args.engine == 'torch':
 	from pt.sd_engine import SDEngine
-	sd = SDEngine(version=args.version)
+	sd = SDEngine(args.scheduler, version=args.version)
 else:
 	from tf.sd_engine import SDEngine
 	sd = SDEngine(width=args.width, height=args.height, version=args.version)

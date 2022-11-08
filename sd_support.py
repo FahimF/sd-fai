@@ -49,13 +49,14 @@ class SDSupport:
 	def get_info_string(self):
 		switches = list()
 		switches.append(f'{" | ".join(self.args.prompts)}')
-		switches.append(f'-s{self.args.steps}')
-		switches.append(f'-W{self.args.width}')
-		switches.append(f'-H{self.args.height}')
-		switches.append(f'-g{self.args.guidance}')
-		switches.append(f'-v{self.args.version}')
+		switches.append(f'-s {self.args.steps}')
+		switches.append(f'-W {self.args.width}')
+		switches.append(f'-H {self.args.height}')
+		switches.append(f'-g {self.args.guidance}')
+		switches.append(f'-v {self.args.version}')
+		switches.append(f'-d {self.args.scheduler}')
 		if self.args.init_image is not None:
-			switches.append(f'-I{self.args.init_image}')
+			switches.append(f'-I {self.args.init_image}')
 		if self.args.strength and self.args.init_image is not None:
-			switches.append(f'-f{self.args.strength}')
+			switches.append(f'-f {self.args.strength}')
 		return ' '.join(switches)

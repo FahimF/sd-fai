@@ -9,13 +9,15 @@ You do not need both PyTorch and Tensorflow installed if all you want to do is u
 ## Arguments
 
 ```bash
-usage: cli.py [-h] [-c COPIES] [-e ENGINE] [-F FRAME_CAP] [-f STRENGTH] [-g GUIDANCE] [-H HEIGHT] [-I INIT_IMAGE] [-o OUTDIR] [-p PROMPTS [PROMPTS ...]] [-S SEED] [-s STEPS]
-              [-W WIDTH]
+usage: cli.py [-h] [-c COPIES] [-d SCHEDULER] [-e ENGINE] [-F FRAME_CAP] [-f STRENGTH] [-g GUIDANCE] [-H HEIGHT] [-I INIT_IMAGE] [-o OUTDIR] [-p PROMPTS [PROMPTS ...]] [-S SEED]
+              [-s STEPS] [-v VERSION] [-W WIDTH]
 
-options:
+optional arguments:
   -h, --help            show this help message and exit
   -c COPIES, --copies COPIES
                         Number of images to generate
+  -d SCHEDULER, --scheduler SCHEDULER
+                        Type of scheduler to use. Options: lmsd, ddim, dpm (DPMSolver), dpmp (DPMSolver++), euler, euler_a (Ancestral). Default: lmsd
   -e ENGINE, --engine ENGINE
                         The SD engine to use: PyTorch or TensorFlow. Values: torch or tf
   -F FRAME_CAP, --frame_cap FRAME_CAP
@@ -35,6 +37,8 @@ options:
   -S SEED, --seed SEED  Image seed - the same image will be generated for a specific seed
   -s STEPS, --steps STEPS
                         Number of inference steps
+  -v VERSION, --version VERSION
+                        Stable Diffusion model version to use. Valid - 1.4, 1.5, defaults to 1.5
   -W WIDTH, --width WIDTH
                         Image width, should be a multiple of 8
 ```
@@ -57,5 +61,11 @@ The engine/framework used by default is PyTorch. If you want to switch to using 
 
 ```bash
 python cli.py -p "a mouse riding a lion" -e tf
+```
+
+If you want to use a specific scheduler instead of the default scheduler you need to use the `-d` parameter to specify the scheduler and the `-s` parameter to set a different number of steps:
+
+```
+python cli.py -p "a mouse riding a lion" -d euler_a -s 40
 ```
 
